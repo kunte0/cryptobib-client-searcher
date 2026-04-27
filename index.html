@@ -44,7 +44,15 @@
     </label>
     <button id="reset-filters" type="button">Reset filters</button>
   </div>
-  <div id="result-meta" class="result-meta"></div>
+  <div class="row meta-row">
+    <div id="result-meta" class="result-meta"></div>
+    <div class="sort" role="group" aria-label="Sort">
+      <span class="sort-label">Sort:</span>
+      <button class="sort-btn" data-sort="year-desc" type="button">Year &darr;</button>
+      <button class="sort-btn" data-sort="year-asc" type="button">Year &uarr;</button>
+      <button class="sort-btn" data-sort="relevance" type="button">Relevance</button>
+    </div>
+  </div>
 </section>
 
 <main id="results"></main>

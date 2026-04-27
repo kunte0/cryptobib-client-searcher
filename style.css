@@ -141,7 +141,30 @@ header .sub { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.92rem; }
   color: var(--chip-on-fg);
 }
 
-.result-meta { font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0 0.1rem; }
+.result-meta { font-size: 0.85rem; color: var(--muted); margin: 0; flex: 1 1 auto; }
+.meta-row { justify-content: space-between; }
+.sort { display: flex; gap: 0.25rem; align-items: center; font-size: 0.85rem; color: var(--muted); }
+.sort-label { margin-right: 0.15rem; }
+.sort-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  border-radius: 0;
+}
+.sort-btn:first-of-type { border-radius: 4px 0 0 4px; }
+.sort-btn:last-of-type { border-radius: 0 4px 4px 0; }
+.sort-btn + .sort-btn { border-left: none; }
+.sort-btn:hover { background: var(--code-bg); }
+.sort-btn.on {
+  background: var(--accent);
+  color: var(--chip-on-fg);
+  border-color: var(--accent);
+}
+.sort-btn.on + .sort-btn { border-left: 1px solid var(--accent); }
 
 #results { margin-top: 0.4rem; }
 .entry {

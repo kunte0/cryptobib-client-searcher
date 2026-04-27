@@ -33,11 +33,24 @@ let ENTRIES = [];
 let VENUES_SELECTED = new Set();
 let ALL_VENUES = [];
 let SHOWN_LIMIT = RESULT_PAGE;
+let SORT = localStorage.getItem('sort') || 'year-desc';
 
 caseInput.checked = localStorage.getItem('cs') === '1';
 caseInput.addEventListener('change', () => {
   localStorage.setItem('cs', caseInput.checked ? '1' : '0');
   rerender();
+});
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  if (btn.dataset.sort === SORT) btn.classList.add('on');
+  btn.addEventListener('click', () => {
+    SORT = btn.dataset.sort;
+    localStorage.setItem('sort', SORT);
+    document.querySelectorAll('.sort-btn').forEach(b =>
+      b.classList.toggle('on', b.dataset.sort === SORT));
+    SHOWN_LIMIT = RESULT_PAGE;
+    rerender();
+  });
 });
 
 let searchT;
@@ -269,6 +282,8 @@ function rerender() {
     matches.push(e);
   }
 
+  sortMatches(matches, tokens, cs);
+
   resultMeta.textContent =
     `${matches.length.toLocaleString()} match${matches.length === 1 ? '' : 'es'}` +
     (matches.length > SHOWN_LIMIT ? ` (showing first ${SHOWN_LIMIT.toLocaleString()})` : '');
@@ -380,6 +395,49 @@ function renderEntry(e, tokens, cs) {
   div.appendChild(actions);
   div.appendChild(pre);
   return div;
+}
+
+function sortMatches(arr, tokens, cs) {
+  const useRelevance = SORT === 'relevance' && tokens.length > 0;
+  if (useRelevance) {
+    const score = new Map();
+    for (const e of arr) score.set(e, relevanceScore(e, tokens, cs));
+    arr.sort((a, b) => {
+      const d = score.get(b) - score.get(a);
+      if (d) return d;
+      // Tiebreak: newest first; entries without year sink.
+      const ay = Number.isFinite(a.year) ? a.year : -Infinity;
+      const by = Number.isFinite(b.year) ? b.year : -Infinity;
+      return by - ay;
+    });
+    return;
+  }
+  const dir = SORT === 'year-asc' ? 1 : -1; // default & 'year-desc' both newest first
+  arr.sort((a, b) => {
+    const ay = Number.isFinite(a.year);
+    const by = Number.isFinite(b.year);
+    if (ay && !by) return -1;     // missing year always last
+    if (!ay && by) return 1;
+    if (!ay && !by) return 0;
+    return (a.year - b.year) * dir;
+  });
+}
+
+function relevanceScore(e, tokens, cs) {
+  const key = cs ? e.key : e.key.toLowerCase();
+  const author = cs ? e.author.join(' ') : e.author.join(' ').toLowerCase();
+  const title = cs ? e.title : e.title.toLowerCase();
+  let score = 0;
+  for (const t of tokens) {
+    score += countAll(key, t) * 4 + countAll(author, t) * 2 + countAll(title, t);
+  }
+  return score;
+}
+function countAll(hay, needle) {
+  if (!needle) return 0;
+  let n = 0, i = 0;
+  while ((i = hay.indexOf(needle, i)) !== -1) { n++; i += needle.length; }
+  return n;
 }
 
 function escapeHtml(s) {
