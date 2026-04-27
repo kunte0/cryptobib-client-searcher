@@ -59,6 +59,81 @@ function extractBibDate(text) {
   return m ? m[1] : '';
 }
 
+// --- LaTeX → Unicode (display only) --------------------------------------
+// Covers the diacritic and special-letter forms that actually appear in
+// cryptobib author/title fields. entry.raw is left untouched, so the
+// "Show BibTeX" view still shows the original encoding.
+
+const LETTER = {
+  ss:'ß', SS:'ẞ', o:'ø', O:'Ø', l:'ł', L:'Ł',
+  aa:'å', AA:'Å', ae:'æ', AE:'Æ', oe:'œ', OE:'Œ',
+  i:'ı', j:'ȷ', th:'þ', TH:'Þ', dh:'ð', DH:'Ð',
+};
+const ACCENT = {
+  '"': { a:'ä', A:'Ä', e:'ë', E:'Ë', i:'ï', I:'Ï', o:'ö', O:'Ö', u:'ü', U:'Ü', y:'ÿ', Y:'Ÿ' },
+  "'": { a:'á', A:'Á', e:'é', E:'É', i:'í', I:'Í', o:'ó', O:'Ó', u:'ú', U:'Ú', y:'ý', Y:'Ý',
+         c:'ć', C:'Ć', n:'ń', N:'Ń', s:'ś', S:'Ś', z:'ź', Z:'Ź', l:'ĺ', L:'Ĺ', r:'ŕ', R:'Ŕ' },
+  '`': { a:'à', A:'À', e:'è', E:'È', i:'ì', I:'Ì', o:'ò', O:'Ò', u:'ù', U:'Ù' },
+  '^': { a:'â', A:'Â', e:'ê', E:'Ê', i:'î', I:'Î', o:'ô', O:'Ô', u:'û', U:'Û',
+         c:'ĉ', C:'Ĉ', g:'ĝ', G:'Ĝ', h:'ĥ', H:'Ĥ', j:'ĵ', s:'ŝ', S:'Ŝ', w:'ŵ', W:'Ŵ', y:'ŷ', Y:'Ŷ' },
+  '~': { a:'ã', A:'Ã', n:'ñ', N:'Ñ', o:'õ', O:'Õ' },
+  '=': { a:'ā', e:'ē', i:'ī', o:'ō', u:'ū', A:'Ā', E:'Ē', I:'Ī', O:'Ō', U:'Ū' },
+  '.': { c:'ċ', g:'ġ', z:'ż', e:'ė', E:'Ė' },
+  c:   { c:'ç', C:'Ç', s:'ş', S:'Ş', t:'ţ', T:'Ţ' },
+  v:   { c:'č', C:'Č', s:'š', S:'Š', z:'ž', Z:'Ž', n:'ň', N:'Ň', r:'ř', R:'Ř',
+         t:'ť', T:'Ť', e:'ě', E:'Ě', l:'ľ', L:'Ľ', d:'ď', D:'Ď' },
+  u:   { g:'ğ', G:'Ğ', a:'ă', A:'Ă' },
+  H:   { o:'ő', O:'Ő', u:'ű', U:'Ű' },
+  r:   { a:'å', A:'Å', u:'ů', U:'Ů' },
+  k:   { a:'ą', A:'Ą', e:'ę', E:'Ę', i:'į', I:'Į' },
+};
+
+function decodeLatex(s) {
+  if (!s) return s;
+  if (s.indexOf('\\') < 0 && s.indexOf('{') < 0) return s;
+
+  // Accent applied to a dotless letter, e.g. \"\i → ï
+  s = s.replace(/\\(["'`^~=.])\\([ij])/g,
+    (m, a, l) => (ACCENT[a] && ACCENT[a][l === 'i' ? 'i' : 'j']) || l);
+
+  // {\<letter-form>}  e.g. {\ss}, {\o}, {\AE}
+  s = s.replace(/\{\\([a-zA-Z]+)\}/g, (m, n) => LETTER[n] !== undefined ? LETTER[n] : m);
+
+  // Symbol-accent commands. Two separate forms so the outer braces in
+  // patterns like {\"o} are not consumed asymmetrically:
+  //   \"{o}  → ö
+  s = s.replace(/\\(["'`^~=.])\{([a-zA-Z])\}/g,
+    (m, a, l) => (ACCENT[a] && ACCENT[a][l]) || l);
+  //   \"o    → ö
+  s = s.replace(/\\(["'`^~=.])([a-zA-Z])/g,
+    (m, a, l) => (ACCENT[a] && ACCENT[a][l]) || l);
+
+  // Letter-named accents: \c{c}, \v{S}, \u{a}, \H{o}, \r{a}, \k{a}
+  s = s.replace(/\\([cvuHrk])\{([a-zA-Z])\}/g,
+    (m, a, l) => (ACCENT[a] && ACCENT[a][l]) || l);
+  // …and the whitespace-separator form: \c c
+  s = s.replace(/\\([cvuHrk])\s+([a-zA-Z])(?=[\s,.;:!?}]|$)/g,
+    (m, a, l) => (ACCENT[a] && ACCENT[a][l]) || l);
+
+  // Standalone letter-form macros: \ss, \o, \aa, \i, \j (not in braces)
+  s = s.replace(/\\(ss|SS|aa|AA|ae|AE|oe|OE|o|O|l|L|i|j|th|TH|dh|DH)(?![a-zA-Z])/g,
+    (m, n) => LETTER[n]);
+
+  // Escaped punctuation
+  s = s.replace(/\\([&%#_$])/g, '$1');
+
+  // Drop unknown formatting commands, keep their argument:
+  //   \textsf{Glitter} → Glitter,  \emph{foo} → foo
+  s = s.replace(/\\[a-zA-Z]+\*?\{([^{}]*)\}/g, '$1');
+
+  // Strip remaining LaTeX capitalisation braces (innermost first)
+  while (/\{[^{}]*\}/.test(s)) {
+    s = s.replace(/\{([^{}]*)\}/g, '$1');
+  }
+
+  return s;
+}
+
 // --- Parser --------------------------------------------------------------
 // Format-specific to cryptobib/export. Not a general BibTeX parser.
 
@@ -143,7 +218,8 @@ function parseAll(text) {
     const venue = colonIdx >= 0 ? key.slice(0, colonIdx) : '';
 
     const author = fields.author
-      ? fields.author.replace(/\s+/g, ' ').split(/\s+and\s+/).map(s => s.trim()).filter(Boolean)
+      ? fields.author.replace(/\s+/g, ' ').split(/\s+and\s+/)
+          .map(s => decodeLatex(s.trim())).filter(Boolean)
       : [];
 
     let year = null;
@@ -157,7 +233,7 @@ function parseAll(text) {
       type,
       venue,
       author,
-      title: fields.title || '',
+      title: decodeLatex(fields.title || ''),
       year,
       doi: fields.doi || '',
       url: fields.url || '',

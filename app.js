@@ -8,7 +8,8 @@ const CRYPTO_BIB_URL =
 const DB_NAME = 'cryptobib';
 const DB_VERSION = 1;
 const STORE = 'cache';
-const CACHE_KEY = 'crypto.bib';
+// v2: entries now have LaTeX-decoded author/title; older caches must be re-parsed.
+const CACHE_KEY = 'crypto.bib.v2';
 const RESULT_PAGE = 200;
 
 const $ = (id) => document.getElementById(id);
@@ -304,7 +305,7 @@ function renderEntry(e, tokens, cs) {
 
   const title = document.createElement('div');
   title.className = 'title';
-  title.appendChild(highlight(stripBraces(e.title), tokens, cs));
+  title.appendChild(highlight(e.title, tokens, cs));
 
   const authors = document.createElement('div');
   authors.className = 'authors';
@@ -379,12 +380,6 @@ function renderEntry(e, tokens, cs) {
   div.appendChild(actions);
   div.appendChild(pre);
   return div;
-}
-
-// Drop the {…} grouping braces LaTeX uses to protect capitalisation,
-// purely for display. Entry.raw is left untouched.
-function stripBraces(s) {
-  return s.replace(/\{([^{}]*)\}/g, '$1');
 }
 
 function escapeHtml(s) {
