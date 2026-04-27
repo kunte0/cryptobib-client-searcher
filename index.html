@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CryptoBib Search</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>CryptoBib Search</h1>
+  <p class="sub">
+    Client-side search over
+    <a href="https://cryptobib.di.ens.fr/" target="_blank" rel="noopener">cryptobib</a>.
+    Data fetched from
+    <a href="https://github.com/cryptobib/export" target="_blank" rel="noopener">cryptobib/export</a>
+    and cached in your browser.
+  </p>
+</header>
+
+<section id="status" class="status">
+  <div id="status-msg">Initialising&hellip;</div>
+  <div id="progress-wrap" hidden>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+    <div id="progress-text"></div>
+  </div>
+</section>
+
+<section id="controls" hidden>
+  <div class="row search-row">
+    <input id="q" type="search" placeholder="Search authors, titles, cite keys&hellip;  (e.g. 'bellare rogaway random oracle')" autocomplete="off" autofocus>
+    <label class="toggle"><input id="case" type="checkbox"> Case sensitive</label>
+  </div>
+  <div class="row filter-row">
+    <details>
+      <summary><span id="venue-summary">Venues: all</span></summary>
+      <div id="venues" class="venue-chips"></div>
+    </details>
+    <label>Year
+      <input id="ymin" type="number" inputmode="numeric" class="year-input">
+      &ndash;
+      <input id="ymax" type="number" inputmode="numeric" class="year-input">
+    </label>
+    <button id="reset-filters" type="button">Reset filters</button>
+  </div>
+  <div id="result-meta" class="result-meta"></div>
+</section>
+
+<main id="results"></main>
+
+<footer id="footer" hidden>
+  <span id="data-info"></span>
+  &middot;
+  <a href="#" id="refresh">Force refresh</a>
+  &middot;
+  <a href="https://github.com/cryptobib/export" target="_blank" rel="noopener">source</a>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
