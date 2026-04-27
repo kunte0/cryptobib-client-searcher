@@ -114,12 +114,12 @@ async function idbDel() {
   } catch (e) { /* offline; fall through */ }
 
   if (cached && cached.entries && (!remoteEtag || cached.etag === remoteEtag)) {
-    install(cached.entries, cached.etag, cached.fetchedAt);
+    install(cached.entries, cached.etag, cached.fetchedAt, false, cached.bibDate);
     return;
   }
 
   if (cached && cached.entries) {
-    install(cached.entries, cached.etag, cached.fetchedAt, /*staleNotice*/ true);
+    install(cached.entries, cached.etag, cached.fetchedAt, /*staleNotice*/ true, cached.bibDate);
     refreshInBackground();
     return;
   }
@@ -157,10 +157,10 @@ function downloadAndInstall(background = false) {
       } else if (m.type === 'done') {
         const fetchedAt = Date.now();
         try {
-          await idbPut({ etag: m.etag, fetchedAt, entries: m.entries });
+          await idbPut({ etag: m.etag, fetchedAt, entries: m.entries, bibDate: m.bibDate });
         } catch (e) { /* storage may be full; still render */ }
         worker.terminate();
-        install(m.entries, m.etag, fetchedAt);
+        install(m.entries, m.etag, fetchedAt, false, m.bibDate);
         resolve();
       } else if (m.type === 'error') {
         worker.terminate();
@@ -178,7 +178,7 @@ function fmtBytes(n) {
   return (n / 1024 / 1024).toFixed(1) + ' MB';
 }
 
-function install(entries, etag, fetchedAt, staleNotice = false) {
+function install(entries, etag, fetchedAt, staleNotice = false, bibDate = '') {
   ENTRIES = entries;
   $('status').hidden = true;
   controls.hidden = false;
@@ -195,8 +195,10 @@ function install(entries, etag, fetchedAt, staleNotice = false) {
 
   const shortEtag = (etag || '').replace(/"/g, '').slice(0, 12);
   const ago = fetchedAt ? relTime(fetchedAt) : 'just now';
+  const datePart = bibDate ? ` &middot; dated ${bibDate}` : '';
   dataInfo.innerHTML =
-    `${entries.length.toLocaleString()} entries${shortEtag ? ` &middot; etag <code>${shortEtag}</code>` : ''} &middot; fetched ${ago}` +
+    `${entries.length.toLocaleString()} entries${datePart} &middot; fetched ${ago}` +
+    (shortEtag ? ` &middot; etag <code>${shortEtag}</code>` : '') +
     (staleNotice ? ' (refreshing in background…)' : '');
 
   rerender();

@@ -45,8 +45,18 @@ async function fetchAndParse() {
   self.postMessage({ type: 'progress', received, total: Math.max(total, received) });
   self.postMessage({ type: 'parsing' });
 
+  const bibDate = extractBibDate(text);
   const entries = parseAll(text);
-  self.postMessage({ type: 'done', entries, etag });
+  self.postMessage({ type: 'done', entries, etag, bibDate });
+}
+
+// Pulls the upstream release date out of the comment header:
+//   %  Date:
+//   %      2026-04-22
+function extractBibDate(text) {
+  const head = text.slice(0, 4096);
+  const m = head.match(/%\s*Date:\s*\n\s*%\s*(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
 }
 
 // --- Parser --------------------------------------------------------------
