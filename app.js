@@ -329,24 +329,28 @@ function renderEntry(e, tokens, cs) {
   const actions = document.createElement('div');
   actions.className = 'actions';
 
-  const cite = document.createElement('button');
-  cite.type = 'button';
-  cite.textContent = 'Copy \\cite';
   const copied = document.createElement('span');
   copied.className = 'copied';
   copied.hidden = true;
-  cite.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText('\\cite{' + e.key + '}');
-      copied.textContent = 'copied!';
-      copied.hidden = false;
-      setTimeout(() => { copied.hidden = true; }, 1200);
-    } catch (err) {
-      copied.textContent = 'copy failed';
-      copied.hidden = false;
-    }
-  });
-  actions.appendChild(cite);
+  const makeCopy = (label, text) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        copied.textContent = 'copied!';
+        copied.hidden = false;
+        setTimeout(() => { copied.hidden = true; }, 1200);
+      } catch (err) {
+        copied.textContent = 'copy failed';
+        copied.hidden = false;
+      }
+    });
+    return btn;
+  };
+  actions.appendChild(makeCopy('Copy key', e.key));
+  actions.appendChild(makeCopy('Copy \\cite', '\\cite{' + e.key + '}'));
 
   if (e.doi) {
     const a = document.createElement('a');
